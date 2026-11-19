@@ -6,9 +6,33 @@
 прямо под полем ввода, рядом с индикатором контекста, и карточку трат — за сегодня, за
 месяц, за этот чат и график по дням.
 
-> **Неофициальный и некоммерческий.** Плагин сделан не PlusVibeAPI, не связан с ними и
-> не одобрен ими, и автор не получает с него ничего. Он обращается к их публичному API
-> вашим собственным ключом. См. [Товарные знаки](#товарные-знаки).
+## Установка
+
+Нужен DeepSeek Harness `0.2.0-rc.2` или новее. Скопируйте строку для своего приложения и
+перезапустите профиль — плагин появится в **Plugins** как `dsh-plusvibe-balance` уже
+включённым.
+
+**Веб-профиль** (`dsh web` или свой браузерный профиль):
+
+```sh
+dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+```
+
+**Приложение Desktop:**
+
+```sh
+dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
+```
+
+### Из npm
+
+Когда `dsh-plusvibe-balance` появится на npmjs, та же команда станет короче — по имени
+пакета:
+
+```sh
+dsh plugin --profile web add dsh-plusvibe-balance
+dsh plugin --profile desktop add dsh-plusvibe-balance
+```
 
 ---
 
@@ -85,65 +109,6 @@ PlusVibeAPI не отдаёт траты по чату: в истории ест
 А вот «сегодня», «за месяц» и график по дням — **не** оценка: это суммы, которые
 провайдер фактически списал (`cost_rub`).
 
-## Установка
-
-Нужен DeepSeek Harness `0.2.0-rc.2` или новее и запущенный web-профиль.
-
-```sh
-dsh plugin --profile <профиль> add dsh-plusvibe-balance
-```
-
-Или **Plugins → Add plugin** в веб-интерфейсе по имени пакета. Перезапустите профиль и
-откройте сессию, модель которой берётся из PlusVibeAPI.
-
-### Настройка
-
-Плагин находит PlusVibeAPI сам: он читает профили провайдеров у работающего
-`llm-pi-ai` и оставляет те, что указывают на хост PlusVibeAPI. От вас нужно только то,
-что вы уже настроили, например:
-
-```yaml
-- id: llm-pi-ai
-  config:
-    providers:
-      plusvibeapi:
-        apiKeyEnv: PLUSVIBEAPI_API_KEY
-        api: openai-completions
-        baseURL: https://plusvibeapi.ru/v1
-        models:
-          - id: deepseek-v4.1-flash-1017
-            name: deepseek-v4.1-flash-1017
-            contextWindow: 900000
-            maxTokens: 64000
-```
-
-и `PLUSVIBEAPI_API_KEY=sk-pv-…` в окружении или в хранилище ключей DSH.
-
-Провайдер на нестандартном эндпоинте добавляется явно:
-
-```yaml
-- id: plusvibe-balance
-  name: dsh-plusvibe-balance
-  config:
-    dailyDays: 7               # окно графика, 1..30
-    dailyMaxPages: 40          # сколько страниц истории читать, по 100 записей
-    dashboardPath: /dashboard  # страница, которая откроется по клику
-    sites:                     # необязательно: маршруты без автоопределения
-      - provider: plusvibeapi
-        baseURL: https://gw.plusvibeapi.ru/v1
-        apiKeyEnv: PLUSVIBEAPI_API_KEY
-        siteUrl: https://plusvibeapi.ru/dashboard
-```
-
-`dailyMaxPages` ограничивает чтение истории: провайдер отдаёт её от новых к старым и не
-имеет сводного эндпоинта, поэтому на очень активном аккаунте чтение упирается в лимит —
-и карточка пишет, что история прочитана не полностью.
-
-## Удаление
-
-Выключите бандл (или удалите его). Показание и все четыре маршрута исчезнут; в журналы
-сессий ничего не пишется.
-
 ## Ограничения
 
 - Только Web. Плагин живёт в доке композера, а он есть лишь у Web/Desktop.
@@ -151,6 +116,9 @@ dsh plugin --profile <профиль> add dsh-plusvibe-balance
   сессия.
 - Баланс для модели другого провайдера не показывается никогда.
 - Нет лимитов и оповещений: плагин показывает, но не следит.
+- График по дням читает не больше `dailyMaxPages` × 100 записей истории. На очень
+  активном аккаунте чтение упирается в этот лимит, и карточка пишет, что история
+  прочитана не полностью.
 
 ## Товарные знаки
 

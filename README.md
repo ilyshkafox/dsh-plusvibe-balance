@@ -6,10 +6,32 @@ A DeepSeek Harness plugin that shows your [PlusVibeAPI](https://plusvibeapi.ru) 
 right under the message box, next to the context meter — and a card of what you have
 spent: today, this month, this chat, and the last days as a chart.
 
-> **Unofficial and non-commercial.** This plugin is not made by, affiliated with, or
-> endorsed by PlusVibeAPI, and the author receives no money from it in any form. It
-> talks to their public API with your own key. See
-> [Trademarks and use of the mark](#trademarks-and-use-of-the-mark).
+## Install
+
+Requires DeepSeek Harness `0.2.0-rc.2` or newer. Copy the line for your app, then restart
+that profile — the plugin appears under **Plugins** as `dsh-plusvibe-balance`, switched on.
+
+**Web profile** (`dsh web`, or a browser profile you boot yourself):
+
+```sh
+dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+```
+
+**Desktop app:**
+
+```sh
+dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
+```
+
+### From npm
+
+Once `dsh-plusvibe-balance` is published on npmjs, the same command shortens to the
+package name:
+
+```sh
+dsh plugin --profile web add dsh-plusvibe-balance
+dsh plugin --profile desktop add dsh-plusvibe-balance
+```
 
 ---
 
@@ -87,71 +109,14 @@ Where it can differ from the invoice:
 Today, this month and the per-day chart are **not** estimates: those are the sums the
 provider actually charged (`cost_rub`).
 
-## Install
-
-Requires DeepSeek Harness `0.2.0-rc.2` or newer, and a running web profile.
-
-```sh
-dsh plugin --profile <profile> add dsh-plusvibe-balance
-```
-
-Or **Plugins → Add plugin** in the Web UI with the package name. Restart the profile,
-then open a session whose model comes from PlusVibeAPI.
-
-### Setup
-
-The plugin finds PlusVibeAPI by itself: it reads the provider profiles of the running
-`llm-pi-ai` entry and keeps the ones pointing at a PlusVibeAPI host. You need nothing
-beyond the provider you already use — for example:
-
-```yaml
-- id: llm-pi-ai
-  config:
-    providers:
-      plusvibeapi:
-        apiKeyEnv: PLUSVIBEAPI_API_KEY
-        api: openai-completions
-        baseURL: https://plusvibeapi.ru/v1
-        models:
-          - id: deepseek-v4.1-flash-1017
-            name: deepseek-v4.1-flash-1017
-            contextWindow: 900000
-            maxTokens: 64000
-```
-
-and `PLUSVIBEAPI_API_KEY=sk-pv-…` in the environment or the DSH credentials store.
-
-A provider on a custom endpoint is added explicitly:
-
-```yaml
-- id: plusvibe-balance
-  name: dsh-plusvibe-balance
-  config:
-    dailyDays: 7               # chart window, 1..30
-    dailyMaxPages: 40          # history pages read for the chart, 100 records each
-    dashboardPath: /dashboard  # page a click opens on the provider's site
-    sites:                     # optional: routes that are not auto-detected
-      - provider: plusvibeapi
-        baseURL: https://gw.plusvibeapi.ru/v1
-        apiKeyEnv: PLUSVIBEAPI_API_KEY
-        siteUrl: https://plusvibeapi.ru/dashboard
-```
-
-`dailyMaxPages` bounds the chart scan: the provider pages history newest-first and has no
-aggregate endpoint, so a very busy account stops at the cap and the card says the history
-was read only partly.
-
-## Uninstalling
-
-Turn the bundle off (or remove it). The reading and all four routes disappear; nothing is
-written to your session logs.
-
 ## Limitations
 
 - Web only. The pill lives in the composer dock, which only the Web/Desktop surface has.
 - One provider at a time: the reading follows the model the session currently routes to.
 - Balance for a model routed through a different provider is never shown.
 - No spending limit, no alert: it reports, it does not police.
+- The per-day chart reads at most `dailyMaxPages` × 100 history records. A very busy
+  account stops at that cap, and the card says the history was read only partly.
 
 ## Trademarks and use of the mark
 
