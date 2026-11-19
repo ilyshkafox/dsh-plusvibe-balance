@@ -1,0 +1,106 @@
+name: publish
+
+# A GitHub Release publishes the package to npm. No tag push, no branch push:
+# the release is the one act that ships, so what reaches npm is always what was
+# released.
+#
+# Authentication is npm trusted publishing (OIDC) — there is no NPM_TOKEN
+# secret, and npm attaches provenance automatically because this repository is
+# public. The trust is configured once, on the package page:
+#   npmjs.com → dsh-plusvibe-balance → Settings → Trusted Publisher
+#     provider           GitHub Actions
+#     organization/user  ilyshkafox
+#     repository         dsh-plusvibe-balance
+#     workflow filename  publish.yml
+#     allowed action     npm publish
+#
+# The workflow file has to be on the default branch for the release event to
+# find it, and the release tag has to equal the version in package.json.
+
+on:
+  release:
+    types: [published]
+  # Rerun a failed publish without re-releasing. Picks the version from
+  # package.json, since a manual run carries no tag.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Two releases in a row must not race for the same version.
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Check JavaScript syntax
+        run: |
+          node --check index.js
+          node --check client.js
+
+      - name: Check the manifest and its display resources
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, existsSync } from "node:fs";
+            const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+            if (pkg.private) throw new Error("package.json is private");
+            if (!pkg.dsh?.bundle?.patch) throw new Error("no dsh.bundle.patch");
+            for (const file of [pkg.dsh.bundle.patch, "icon.svg"]) {
+              if (!existsSync(file)) throw new Error("missing " + file);
+            }
+            for (const locale of ["locale/en.json", "locale/ru.json"]) {
+              const meta = JSON.parse(readFileSync(locale, "utf8")).meta ?? {};
+              if (!meta.title || !meta.description) throw new Error(locale + ": no title or description");
+              if (meta.detail && !existsSync(meta.detail)) {
+                throw new Error(locale + ": missing detail document " + meta.detail);
+              }
+            }
+            console.log(pkg.name + "@" + pkg.version);
+          '
+
+      - name: Release tag must match the package version
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("package.json", "utf8")).version)')"
+          if [ "$tag" != "$version" ]; then
+            echo "release tag ${GITHUB_REF_NAME} does not match package version ${version}" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        run: |
+          version="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("package.json", "utf8")).version)')"
+          name="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("package.json", "utf8")).name)')"
+
+          # Re-running a release must not fail on a version that already shipped.
+          if npm view "${name}@${version}" version >/dev/null 2>&1; then
+            echo "${name}@${version} is already on npm; nothing to do."
+            exit 0
+          fi
+
+          # A prerelease must not take over the `latest` dist-tag, which is what
+          # a plain `dsh plugin add` installs.
+          if [[ "${version}" == *-* ]]; then
+            echo "publishing ${name}@${version} under the next tag"
+            npm publish --tag next
+          else
+            npm publish
+          fi
+
+      - name: Report what npm now serves
+        run: |
+          name="$(node --input-type=module -e 'import { readFileSync } from "node:fs"; console.log(JSON.parse(readFileSync("package.json", "utf8")).name)')"
+          npm view "${name}" version dist-tags

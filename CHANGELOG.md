@@ -29,6 +29,11 @@ First release.
 - Caching: 20 s balance, 30 s usage, 30 min price list, 5 min history; one
   in-flight request shared by every open session.
 - English and Russian UI and documentation.
+- A plugin details page with one feature image (`docs/DETAIL.md`,
+  `docs/DETAIL.ru.md`, `docs/preview.svg`).
+- A `publish` workflow that publishes a GitHub Release to npm over OIDC trusted
+  publishing: no token secret, automatic provenance, `next` for prereleases,
+  and a rerun that skips a version already on the registry.
 
 ### Notes
 

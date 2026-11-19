@@ -43,6 +43,37 @@ Questions and anything that does not fit an issue: <ilyshkafox@mail.ru>.
 Plain ES modules, no build step. Comments explain *why*, not *what*. Keep the
 Host half free of DOM and the browser half free of secrets.
 
+## Releasing (maintainers)
+
+The package has no build step, so a release is a version bump and a GitHub
+Release. Publishing to npm happens by itself.
+
+1. Bump `version` in `package.json` and add the matching `CHANGELOG.md` entry.
+2. Check what would ship: `npm pack --dry-run` — the `files` list in the
+   manifest is a whitelist, so a new runtime file, locale, or `docs/` asset has
+   to be added there or it will be missing from the tarball.
+3. Commit and push to `main`.
+4. Create a GitHub Release whose tag is `v<version>` — the tag has to match the
+   manifest version exactly, or the workflow refuses. Publishing the release
+   starts `.github/workflows/publish.yml`, which publishes over npm trusted
+   publishing (OIDC): no `NPM_TOKEN` secret exists, and npm attaches provenance
+   because the repository is public.
+5. A version that is already on npm is skipped, so re-running a release is
+   safe. A prerelease version such as `0.2.0-rc.1` goes out under the `next`
+   dist-tag and leaves `latest` — what `dsh plugin add` installs — alone.
+
+One-time setup, on the package page (it must exist first):
+
+- **Settings → Trusted Publisher → GitHub Actions**, with `ilyshkafox`,
+  `dsh-plusvibe-balance`, `publish.yml`, and the `npm publish` action allowed.
+  A new configuration must complete its first publish within two days.
+- Optionally **Publishing access → Require two-factor authentication and
+  disallow tokens**, so a leaked token cannot publish either.
+
+The workflow file has to be on the default branch for the release event to find
+it, and its first successful publish binds the trusted publisher to the
+repository.
+
 ## По-русски
 
 Спасибо, что заглянули. Плагин маленький, поэтому полезнее всего: подробные
@@ -83,3 +114,34 @@ Host half free of DOM and the browser half free of secrets.
 
 Обычные ES-модули, без шага сборки. Комментарии объясняют *почему*, а не *что*.
 В Host-половине не должно быть DOM, в браузерной — секретов.
+
+## Релиз (мейнтейнерам)
+
+Шага сборки нет, поэтому релиз — это смена версии и GitHub Release. Публикация в
+npm происходит сама.
+
+1. Поднимите `version` в `package.json` и добавьте запись в `CHANGELOG.md`.
+2. Посмотрите, что уйдёт в пакет: `npm pack --dry-run` — список `files` в
+   манифесте работает как белый список, поэтому новый runtime-файл, локаль или
+   ресурс в `docs/` нужно туда добавить, иначе его не будет в tarball.
+3. Закоммитьте и запушьте в `main`.
+4. Создайте GitHub Release с тегом `v<версия>` — тег должен точно совпадать с
+   версией в манифесте, иначе workflow откажется. Публикация релиза запускает
+   `.github/workflows/publish.yml`, который публикует через npm trusted publishing
+   (OIDC): секрета `NPM_TOKEN` нет, а npm сам прикладывает provenance, потому что
+   репозиторий публичный.
+5. Версия, которая уже есть на npm, пропускается — перезапускать релиз безопасно.
+   Пререлиз вроде `0.2.0-rc.1` уходит под тегом `next` и не трогает `latest` —
+   то, что ставит `dsh plugin add`.
+
+Разовая настройка на странице пакета (пакет должен уже существовать):
+
+- **Settings → Trusted Publisher → GitHub Actions**, поля `ilyshkafox`,
+  `dsh-plusvibe-balance`, `publish.yml`, разрешённое действие `npm publish`.
+  Новая конфигурация должна успеть опубликовать первую версию в течение двух
+  суток.
+- По желанию **Publishing access → Require two-factor authentication and disallow
+  tokens**, чтобы утёкший токен тоже не смог публиковать.
+
+Файл workflow должен лежать в ветке по умолчанию, иначе событие релиза его не
+найдёт; первая успешная публикация привязывает trusted publisher к репозиторию.

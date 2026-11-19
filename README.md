@@ -8,29 +8,33 @@ spent: today, this month, this chat, and the last days as a chart.
 
 ## Install
 
-Requires DeepSeek Harness `0.2.0-rc.2` or newer. Copy the line for your app, then restart
+Requires DeepSeek Harness `0.2.0-rc.2` or newer. Run the line for your app, then restart
 that profile — the plugin appears under **Plugins** as `dsh-plusvibe-balance`, switched on.
 
 **Web profile** (`dsh web`, or a browser profile you boot yourself):
 
 ```sh
-dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile web add dsh-plusvibe-balance
 ```
 
 **Desktop app:**
 
 ```sh
-dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile desktop add dsh-plusvibe-balance
 ```
 
-### From npm
+The package is on npm as
+[`dsh-plusvibe-balance`](https://www.npmjs.com/package/dsh-plusvibe-balance), which is the
+recommended route.
 
-Once `dsh-plusvibe-balance` is published on npmjs, the same command shortens to the
-package name:
+### From the repository
+
+If the registry copy lags behind `main`, or you want a commit the registry does not carry,
+install the Git address — there is no build step, so pnpm reads the repository as it is:
 
 ```sh
-dsh plugin --profile web add dsh-plusvibe-balance
-dsh plugin --profile desktop add dsh-plusvibe-balance
+dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
 ```
 
 ---

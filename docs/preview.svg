@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="300" viewBox="0 0 640 300" role="img" aria-label="The balance reading in the composer row and the spend card it opens">
+  <!-- Text-free illustration: the composer's bottom row with the balance
+       reading, and the card a click opens. Neutral mid-grey (#8b93a1) with
+       opacity keeps it readable on both light and dark themes; the only
+       colour is the PlusVibeAPI brand yellow, used for the bolt and the
+       tallest bar of the chart. -->
+  <g fill="none" stroke="#8b93a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- the card -->
+    <rect x="216" y="32" width="380" height="176" rx="14" fill="#8b93a1" fill-opacity="0.07"/>
+
+    <!-- header: bolt, label, amount -->
+    <path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" transform="translate(236 47) scale(0.45)" fill="#fed003" stroke="none"/>
+    <rect x="256" y="48" width="96" height="9" rx="4.5" fill="#8b93a1" fill-opacity="0.35" stroke="none"/>
+    <rect x="488" y="48" width="88" height="9" rx="4.5" fill="#8b93a1" fill-opacity="0.6" stroke="none"/>
+
+    <path d="M236 76 H576" stroke-opacity="0.22"/>
+
+    <!-- three spend rows -->
+    <rect x="236" y="90" width="72" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="488" y="90" width="88" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.45" stroke="none"/>
+    <rect x="236" y="110" width="56" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="488" y="110" width="72" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.45" stroke="none"/>
+    <rect x="236" y="130" width="64" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="488" y="130" width="80" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.45" stroke="none"/>
+
+    <!-- per-day spend chart -->
+    <rect x="236" y="178" width="24" height="12" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="274" y="172" width="24" height="18" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="312" y="164" width="24" height="26" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="350" y="170" width="24" height="20" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="388" y="150" width="24" height="40" rx="3" fill="#fed003" stroke="none"/>
+    <rect x="426" y="160" width="24" height="30" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+    <rect x="464" y="174" width="24" height="16" rx="3" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+
+    <!-- chart caption beside the bars -->
+    <rect x="512" y="156" width="64" height="6" rx="3" fill="#8b93a1" fill-opacity="0.35" stroke="none"/>
+    <rect x="512" y="170" width="40" height="6" rx="3" fill="#8b93a1" fill-opacity="0.22" stroke="none"/>
+
+    <!-- what a click opens -->
+    <path d="M385 210 V220" stroke-dasharray="3 4" stroke-opacity="0.45"/>
+
+    <!-- the composer's bottom row -->
+    <rect x="300" y="224" width="170" height="30" rx="15" fill="#8b93a1" fill-opacity="0.07"/>
+    <path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z" transform="translate(318 235) scale(0.42)" fill="#fed003" stroke="none"/>
+    <rect x="338" y="236" width="86" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.5" stroke="none"/>
+
+    <rect x="486" y="224" width="110" height="30" rx="15" fill="#8b93a1" fill-opacity="0.07"/>
+    <circle cx="504" cy="239" r="7" stroke-opacity="0.45"/>
+    <rect x="520" y="236" width="60" height="7" rx="3.5" fill="#8b93a1" fill-opacity="0.3" stroke="none"/>
+  </g>
+</svg>

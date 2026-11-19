@@ -8,30 +8,34 @@
 
 ## Установка
 
-Нужен DeepSeek Harness `0.2.0-rc.2` или новее. Скопируйте строку для своего приложения и
+Нужен DeepSeek Harness `0.2.0-rc.2` или новее. Выполните строку для своего приложения и
 перезапустите профиль — плагин появится в **Plugins** как `dsh-plusvibe-balance` уже
 включённым.
 
 **Веб-профиль** (`dsh web` или свой браузерный профиль):
 
 ```sh
-dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile web add dsh-plusvibe-balance
 ```
 
 **Приложение Desktop:**
 
 ```sh
-dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile desktop add dsh-plusvibe-balance
 ```
 
-### Из npm
+Пакет есть на npm:
+[`dsh-plusvibe-balance`](https://www.npmjs.com/package/dsh-plusvibe-balance) — это
+рекомендуемый способ.
 
-Когда `dsh-plusvibe-balance` появится на npmjs, та же команда станет короче — по имени
-пакета:
+### Из репозитория
+
+Если копия в реестре отстаёт от `main` или нужен коммит, которого в реестре нет,
+укажите адрес Git — шага сборки у пакета нет, pnpm берёт репозиторий как есть:
 
 ```sh
-dsh plugin --profile web add dsh-plusvibe-balance
-dsh plugin --profile desktop add dsh-plusvibe-balance
+dsh plugin --profile web add github:ilyshkafox/dsh-plusvibe-balance
+dsh plugin --profile desktop add github:ilyshkafox/dsh-plusvibe-balance
 ```
 
 ---
