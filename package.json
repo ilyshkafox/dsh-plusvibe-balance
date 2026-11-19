@@ -1,0 +1,67 @@
+{
+  "name": "dsh-plusvibe-balance",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "PlusVibeAPI balance, today's and this month's spend, this chat's estimated cost, and a per-day spend chart beside the DeepSeek Harness composer.",
+  "license": "MIT",
+  "author": {
+    "name": "ilyshkafox",
+    "email": "ilyshkafox@mail.ru",
+    "url": "https://github.com/ilyshkafox"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ilyshkafox/dsh-plusvibe-balance.git"
+  },
+  "homepage": "https://github.com/ilyshkafox/dsh-plusvibe-balance#readme",
+  "bugs": {
+    "url": "https://github.com/ilyshkafox/dsh-plusvibe-balance/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "dsh-bundle",
+    "deepseek-harness",
+    "plusvibeapi",
+    "balance",
+    "usage",
+    "cost"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2 || >=0.2.1-rc.2 || >=0.2.2-rc.1"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md",
+    "README.ru.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
+    }
+  }
+}

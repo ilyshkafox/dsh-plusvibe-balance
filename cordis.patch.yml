@@ -1,0 +1,8 @@
+- insert:
+    - id: plusvibe-balance
+      name: dsh-plusvibe-balance
+      config:
+        dailyDays: 7
+        dailyMaxPages: 40
+        dashboardPath: /dashboard
+        sites: []

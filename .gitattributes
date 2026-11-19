@@ -1,0 +1,10 @@
+# Keep LF in the repository on every platform: the files are JavaScript, YAML,
+# and Markdown that tools read verbatim, and a CRLF checkout makes the diff of a
+# one-line change touch the whole file.
+* text=auto eol=lf
+
+# Binary-ish assets keep their bytes.
+*.svg text
+*.png binary
+*.jpg binary
+*.webp binary

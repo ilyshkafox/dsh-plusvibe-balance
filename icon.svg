@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" role="img" aria-label="PlusVibeAPI">
+  <!-- The PlusVibeAPI bolt, taken unchanged from the mark published on
+       plusvibeapi.ru: same 24x24 artwork, same path, same brand yellow
+       (#fed003). The 36px display size only scales that canvas up, so the
+       glyph keeps the proportions of the original instead of being redrawn.
+       The fill sits on the path so a host that drops root attributes still
+       draws it; `color` is there for a theme that prefers currentColor. -->
+  <g style="color:#fed003">
+    <path fill="#fed003" d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.2z"/>
+  </g>
+</svg>
