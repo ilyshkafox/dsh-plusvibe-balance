@@ -15,6 +15,8 @@ spent: today, this month, this chat, and the last days as a chart.
 
 ## What you get
 
+![The balance pill under the composer, with the spend card open](https://raw.githubusercontent.com/ilyshkafox/dsh-plusvibe-balance/main/docs/screenshot.png)
+
 The composer's bottom row normally carries two readings: turns/steps with output speed,
 and the token total with the cache hit rate. This plugin adds a third, at the right:
 
