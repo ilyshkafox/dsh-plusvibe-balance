@@ -6,6 +6,13 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0] — 2026-11-21
+
+The four HTTP routes now pass DeepSeek Harness's own access check before they read
+anything.
+
 ### Security
 
 - **The four HTTP routes now go through DSH's own access check.** Each request asks
@@ -18,6 +25,14 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
   second layer, and remains the only gate in a composition that mounts no `connection`
   service, so the plugin still works there. Registration and disposal are unchanged:
   the routes and their check are removed together with `ctx.effect`.
+
+### Changed
+
+- **A request without the page's session cookie is now refused with `401`.** That is
+  what the standard check means: the routes answer the signed-in page and nothing
+  else. A plain `curl` against the loopback port used to reach them; it no longer
+  does. The card in the page is unaffected. The check exists in every DSH version the
+  manifest accepts (`0.2.0-rc.2` and newer), so `engines` is unchanged.
 
 ## [0.2.0] — 2026-11-21
 
