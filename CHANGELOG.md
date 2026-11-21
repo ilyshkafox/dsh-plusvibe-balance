@@ -6,12 +6,9 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 ## [Unreleased]
 
-Nothing yet.
-
-## [0.1.1] — 2026-11-21
-
 Storefront assets and marketplace submission. No behaviour changes: the runtime
-files are untouched.
+files are untouched. Not released yet — `version` in `package.json` stays at the
+last published release until a release is asked for.
 
 ### Added
 
@@ -28,6 +25,8 @@ files are untouched.
 - `CONTRIBUTING.md`: how a listing reaches the marketplaces — the `dsh-plugin`
   topic, the two storefront assets, the pull request, and what each directory
   checks.
+- `AGENTS.md` — the repository's own rule for coding agents, which is that a
+  release happens only when the maintainer asks for one.
 
 ### Changed
 
