@@ -77,8 +77,17 @@ the page. So the plugin is split in two:
 | Browser | the page | renders the reading and the card, talks only to four same-origin routes |
 
 Routes the Host registers: `/plusvibe/providers`, `/plusvibe/balance`, `/plusvibe/daily`,
-`/plusvibe/rates`. They answer JSON, refuse a request another origin started
-(`Sec-Fetch-Site`), and are removed when the bundle is turned off.
+`/plusvibe/rates`. They answer JSON and are removed when the bundle is turned off.
+
+Before a route does anything, DeepSeek Harness decides whether the request may be served
+at all: the plugin asks the composition's own
+`ctx.connection.requestRejection` — the Host/Origin fence and the browser-session
+cookie check that DSH applies to its own `/api` routes. A refused request never reaches
+the key; it gets the status DSH returned (`401` when the page is not signed in, `403`
+for a request another origin or host started) with the same `{ "ok": false, "error": … }`
+body as every other refusal. The plugin's own `Sec-Fetch-Site` fence stays behind that
+check as a second layer, and it is the only gate in a composition that mounts no
+`connection` service, so the plugin still works there.
 
 ## API calls it makes
 
