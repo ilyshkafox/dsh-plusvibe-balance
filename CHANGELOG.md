@@ -8,6 +8,36 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 Nothing yet.
 
+## [0.1.1] — 2026-11-21
+
+Storefront assets and marketplace submission. No behaviour changes: the runtime
+files are untouched.
+
+### Added
+
+- `assets/icon.png` — the square PlusVibeAPI mark as published on
+  plusvibeapi.ru, for the card tile in plugin directories. Byte-identical to the
+  original; the in-app icon stays the vector `icon.svg`.
+- `screenshots.json` — declares `docs/screenshot.png` as the storefront
+  screenshot, so directories show that image in that order instead of guessing
+  from the README.
+- `contrib/awesome-dsh-plugin-entry.yml` — the catalog entry for the
+  awesome-dsh-plugin registry, ready to copy into a fork as
+  `data/plugins/ilyshkafox__dsh-plusvibe-balance.yml`. That registry is the list
+  the plugin market inside DSH installs from.
+- `CONTRIBUTING.md`: how a listing reaches the marketplaces — the `dsh-plugin`
+  topic, the two storefront assets, the pull request, and what each directory
+  checks.
+
+### Changed
+
+- The trademark section of both READMEs now lists the three files that carry the
+  mark — `icon.svg`, `assets/icon.png`, and the bolt redrawn in
+  `docs/preview.svg` — instead of claiming `icon.svg` was the only one.
+- `files` in the manifest ships `assets/icon.png` and `screenshots.json`, and the
+  publish workflow now fails when either is missing or a screenshot path does
+  not resolve.
+
 ## [0.1.0] — 2026-11-19
 
 First release.

@@ -19,5 +19,7 @@ jobs:
         run: |
           node --check index.js
           node --check client.js
+      - name: Manifest, display resources, storefront assets
+        run: node scripts/check.mjs
       - name: Publishable file list
         run: npm pack --dry-run

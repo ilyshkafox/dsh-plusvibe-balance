@@ -1,0 +1,22 @@
+# Catalog entry for the awesome-dsh-plugin registry, which is the list the
+# dshmarket plugin inside DeepSeek Harness installs from. Copy this file into a
+# fork of https://github.com/awesome-dsh-plugin/awesome-dsh-plugin as
+#   data/plugins/ilyshkafox__dsh-plusvibe-balance.yml
+# and open one pull request. Do not edit that repository's READMEs: they are
+# generated from data/plugins/*.yml.
+#
+# Before the pull request: the `icon` URL below has to resolve on `main`, so
+# assets/icon.png must already be pushed there. The catalog accepts only a
+# GitHub-hosted raster image; SVG is refused. `screenshots.json` in this
+# repository is what the storefronts read for the carousel.
+#
+# The description is checked against the code, so it says "an estimate" for the
+# per-chat figure, which is what the plugin actually shows.
+
+url: https://github.com/ilyshkafox/dsh-plusvibe-balance
+name: ilyshkafox/dsh-plusvibe-balance
+category: usage
+description:
+  en: Shows the PlusVibeAPI balance, today's and this month's spend, and an estimate for the current chat beside the DeepSeek Harness composer, with a per-day spend chart.
+  zh: 在 DeepSeek Harness 输入框旁显示 PlusVibeAPI 余额、今日与本月花费、本次对话的估算花费，并附每日花费图表。
+icon: https://raw.githubusercontent.com/ilyshkafox/dsh-plusvibe-balance/main/assets/icon.png

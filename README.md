@@ -124,10 +124,15 @@ provider actually charged (`cost_rub`).
 
 ## Trademarks and use of the mark
 
-`icon.svg` is the PlusVibeAPI bolt, taken from the mark published on
-[plusvibeapi.ru](https://plusvibeapi.ru) and kept geometrically unchanged: the same
-path, the same brand yellow. It is here to identify the service this plugin talks to,
-and for nothing else.
+The PlusVibeAPI mark appears in this repository only where it identifies the service the
+plugin talks to, and nowhere else. Three files carry it, all taken from the mark
+published on [plusvibeapi.ru](https://plusvibeapi.ru) and kept unchanged:
+
+| File | What it is |
+|---|---|
+| `icon.svg` | the bolt as vector artwork, same path and same brand yellow — the plugin's icon inside DSH |
+| `assets/icon.png` | the square mark as published, used only as the storefront tile in plugin directories |
+| `docs/preview.svg` | the drawing on the plugin details page, which redraws the same bolt |
 
 **Unofficial.** This plugin is not affiliated with, sponsored by, or endorsed by
 PlusVibeAPI, and it is not an official client of theirs.
@@ -139,9 +144,10 @@ support. It is published free of charge as open source, for anyone to use.
 PlusVibeAPI and its logo belong to their owner; this project claims no rights to them.
 **If the rightsholder asks for the mark to be removed or replaced — for any reason, with
 no justification needed — it will be removed in the next release**, and the package can
-be republished without it the same day. `icon.svg` is the only file that carries the
-mark and nothing else in the package refers to it, so replacing it with any other glyph
-is a one-file change that touches no behaviour.
+be republished without it the same day. Those three files are the only ones that carry
+the mark, and nothing else in the package refers to them, so replacing them with any
+other glyph is a three-file change that touches no behaviour: `icon.svg` and
+`assets/icon.png` are static assets, and `docs/preview.svg` is a document, not code.
 
 ## License
 

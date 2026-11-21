@@ -15,6 +15,7 @@ Questions and anything that does not fit an issue: <ilyshkafox@mail.ru>.
    ```sh
    node --check index.js
    node --check client.js
+   node scripts/check.mjs
    npm pack --dry-run
    ```
 2. Load the plugin in a profile and look at the result in the browser — a green
@@ -74,6 +75,40 @@ The workflow file has to be on the default branch for the release event to find
 it, and its first successful publish binds the trusted publisher to the
 repository.
 
+## Listing in plugin marketplaces (maintainers)
+
+The plugin market inside DSH (`dshmarket`) ships no catalog of its own: it reads the
+curated [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin)
+registry on every open, and it installs nothing that is not in it. So "publishing to the
+market" is one pull request there — there is no form to fill in.
+
+1. **The repository topic.** Every directory finds plugins through the `dsh-plugin`
+   GitHub topic; without it this repository is invisible to all of them:
+
+   ```sh
+   gh repo edit --add-topic dsh-plugin --add-topic deepseek-harness
+   ```
+
+2. **The assets the storefronts read.** `assets/icon.png` is the card tile and
+   `screenshots.json` lists the images for the carousel. Only a GitHub-hosted raster
+   image is accepted as an icon — `icon.svg` is refused — and the URL in the entry has
+   to resolve on `main`, so push the asset before opening the pull request.
+
+3. **The entry.** Copy `contrib/awesome-dsh-plugin-entry.yml` into a fork as
+   `data/plugins/ilyshkafox__dsh-plusvibe-balance.yml`, then open one pull request. Do
+   not edit that repository's READMEs; they are generated from `data/plugins/*.yml`.
+
+What that registry checks: a `dsh.bundle` manifest, a repository at least a day old,
+real code, the topic, and a description that matches the code. The npm package is
+optional there and is linked automatically through the `repository` field — an `npm:`
+key written into the entry is rejected.
+
+The other directories need nothing beyond the topic: [dsh-plugin.org](https://dsh-plugin.org),
+[dshmarketplace.dev](https://dshmarketplace.dev) and
+[dshmarketplace.com](https://www.dshmarketplace.com) scan it, and
+[dsh-plugin.market](https://dsh-plugin.market) crawls GitHub directly.
+[harnesscatalog.com](https://harnesscatalog.com) is editorial and takes no submissions.
+
 ## По-русски
 
 Спасибо, что заглянули. Плагин маленький, поэтому полезнее всего: подробные
@@ -87,6 +122,7 @@ repository.
    ```sh
    node --check index.js
    node --check client.js
+   node scripts/check.mjs
    npm pack --dry-run
    ```
 2. Загрузите плагин в профиль и посмотрите результат в браузере — успешная
@@ -145,3 +181,38 @@ npm происходит сама.
 
 Файл workflow должен лежать в ветке по умолчанию, иначе событие релиза его не
 найдёт; первая успешная публикация привязывает trusted publisher к репозиторию.
+
+## Публикация в маркетплейсах (мейнтейнерам)
+
+У магазина плагинов внутри DSH (`dshmarket`) своего каталога нет: он при каждом
+открытии читает курируемый реестр
+[awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) и не
+ставит ничего, чего в нём нет. Поэтому «опубликовать в маркете» — это один pull request
+туда, а не форма, которую надо заполнить.
+
+1. **Тема репозитория.** Каталоги находят плагины по теме `dsh-plugin` на GitHub; без
+   неё репозиторий не видит ни один из них:
+
+   ```sh
+   gh repo edit --add-topic dsh-plugin --add-topic deepseek-harness
+   ```
+
+2. **Ресурсы, которые читают витрины.** `assets/icon.png` — плитка карточки, а
+   `screenshots.json` перечисляет картинки для карусели. В качестве иконки принимается
+   только растровая картинка на GitHub — `icon.svg` отклоняется, — и адрес из записи
+   должен уже открываться на `main`, поэтому ресурс пушится до pull request'а.
+
+3. **Запись.** Скопируйте `contrib/awesome-dsh-plugin-entry.yml` в форк как
+   `data/plugins/ilyshkafox__dsh-plusvibe-balance.yml` и откройте один pull request.
+   README того репозитория руками не правятся: они генерируются из `data/plugins/*.yml`.
+
+Что проверяет этот реестр: манифест `dsh.bundle`, возраст репозитория не меньше суток,
+реальный код, тему и описание, которое совпадает с кодом. npm-пакет там не обязателен и
+привязывается сам через поле `repository` — ключ `npm:`, вписанный в запись, отклоняется.
+
+Остальным каталогам не нужно ничего, кроме темы:
+[dsh-plugin.org](https://dsh-plugin.org), [dshmarketplace.dev](https://dshmarketplace.dev)
+и [dshmarketplace.com](https://www.dshmarketplace.com) её сканируют, а
+[dsh-plugin.market](https://dsh-plugin.market) обходит GitHub напрямую.
+[harnesscatalog.com](https://harnesscatalog.com) — редакционный, заявок не принимает.
+
