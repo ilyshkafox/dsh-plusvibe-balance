@@ -1,6 +1,6 @@
 {
   "name": "dsh-plusvibe-balance",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "description": "PlusVibeAPI balance, today's and this month's spend, this chat's estimated cost, and a per-day spend chart beside the DeepSeek Harness composer.",
   "license": "MIT",

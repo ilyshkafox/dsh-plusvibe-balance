@@ -29,7 +29,7 @@ window.__ModuleLoader__.load({
     /** Balance refresh period, in milliseconds. */
     const REFRESH_MS = 60_000
     /** How long the per-day series stays fresh in this page. */
-    const DAILY_TTL_MS = 5 * 60_000
+    const DAILY_TTL_MS = 30_000
     /** Panel width cap; the panel narrows with the viewport. */
     const PANEL_WIDTH = 320
     /** Providers list freshness in this page. */
@@ -44,6 +44,7 @@ window.__ModuleLoader__.load({
       'panel.title': 'PlusVibeAPI',
       'panel.balance': 'Баланс',
       'panel.today': 'Сегодня',
+      'panel.todayHint': 'Сутки по местному времени. Счётчик самого провайдера считает сутки по UTC, поэтому его «сегодня» может быть меньше.',
       'panel.month': 'За месяц',
       'panel.chat': 'В этом чате',
       'panel.requests': '{count} запр.',
@@ -53,9 +54,17 @@ window.__ModuleLoader__.load({
       'panel.partial': 'История прочитана не полностью: показаны последние дни',
       'panel.noSpend': 'Трат за период нет',
       'panel.updated': 'Обновлено в {time}',
+      'panel.refresh': 'Обновить данные',
       'panel.open': 'Открыть кабинет PlusVibeAPI',
       'error.balance': 'Не удалось получить баланс',
       'chart.bar': '{date}: {value}, {count} запр.',
+      'weekday.0': 'Вс',
+      'weekday.1': 'Пн',
+      'weekday.2': 'Вт',
+      'weekday.3': 'Ср',
+      'weekday.4': 'Чт',
+      'weekday.5': 'Пт',
+      'weekday.6': 'Сб',
     }
     const en = {
       'money': '{value} RUB',
@@ -66,6 +75,7 @@ window.__ModuleLoader__.load({
       'panel.title': 'PlusVibeAPI',
       'panel.balance': 'Balance',
       'panel.today': 'Today',
+      'panel.todayHint': 'The local day. The provider\'s own counter uses a UTC day, so its "today" can be smaller.',
       'panel.month': 'This month',
       'panel.chat': 'This chat',
       'panel.requests': '{count} req.',
@@ -75,9 +85,17 @@ window.__ModuleLoader__.load({
       'panel.partial': 'The history was read only partly: recent days are shown',
       'panel.noSpend': 'No spend in this period',
       'panel.updated': 'Updated at {time}',
+      'panel.refresh': 'Refresh the data',
       'panel.open': 'Open the PlusVibeAPI account page',
       'error.balance': 'Could not read the balance',
       'chart.bar': '{date}: {value}, {count} req.',
+      'weekday.0': 'Sun',
+      'weekday.1': 'Mon',
+      'weekday.2': 'Tue',
+      'weekday.3': 'Wed',
+      'weekday.4': 'Thu',
+      'weekday.5': 'Fri',
+      'weekday.6': 'Sat',
     }
 
     const CSS = `
@@ -116,6 +134,24 @@ window.__ModuleLoader__.load({
   margin-left: auto; font-weight: 500; font-variant-numeric: tabular-nums;
   color: var(--dsw-alias-label-primary);
 }
+.dsh-pv-refresh {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  align-self: center; width: 20px; height: 20px; padding: 0;
+  border: none; border-radius: var(--dsw-radius-sm); background: transparent;
+  color: var(--dsw-alias-label-tertiary); cursor: pointer;
+}
+.dsh-pv-refresh:hover, .dsh-pv-refresh:focus-visible {
+  background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary);
+}
+.dsh-pv-refresh:focus-visible { outline: 2px solid var(--dsw-alias-brand-primary); outline-offset: 1px; }
+.dsh-pv-refresh:disabled { cursor: default; }
+.dsh-pv-refresh:disabled:hover { background: transparent; }
+.dsh-pv-refresh[data-busy='true'] { color: var(--dsw-alias-label-primary); }
+.dsh-pv-refresh[data-busy='true'] > svg { animation: dsh-pv-spin 900ms linear infinite; }
+@keyframes dsh-pv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .dsh-pv-refresh[data-busy='true'] > svg { animation: none; opacity: 0.55; }
+}
 .dsh-pv-rule { height: 1px; margin: 8px 0; background: var(--dsw-alias-border-l1); }
 .dsh-pv-rows { margin: 0; }
 .dsh-pv-row { display: flex; align-items: baseline; gap: 12px; justify-content: space-between; padding: 1px 0; }
@@ -128,7 +164,7 @@ window.__ModuleLoader__.load({
 .dsh-pv-col { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }
 .dsh-pv-slot { display: flex; align-items: flex-end; height: 44px; border-radius: 3px; background: var(--dsw-alias-interactive-bg-hover); }
 .dsh-pv-bar { width: 100%; border-radius: 3px; background: var(--dsw-alias-brand-primary); }
-.dsh-pv-day { text-align: center; font-size: 10px; line-height: 14px; color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; }
+.dsh-pv-day { text-align: center; font-size: 10px; line-height: 14px; color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .dsh-pv-day[data-today='true'] { color: var(--dsw-alias-label-primary); font-weight: 500; }
 .dsh-pv-note { margin-top: 8px; color: var(--dsw-alias-label-tertiary); }
 .dsh-pv-note[data-error='true'] { color: var(--dsw-alias-state-warn-primary); }
@@ -203,11 +239,12 @@ window.__ModuleLoader__.load({
      * @param key - cache key.
      * @param ttlMs - freshness window.
      * @param load - the loader.
+     * @param force - reload even while the cached value is still fresh.
      * @returns the cached or freshly loaded value.
      */
-    function cachedValue(store, key, ttlMs, load) {
+    function cachedValue(store, key, ttlMs, load, force = false) {
       const hit = store.get(key)
-      if (hit !== undefined && hit.value !== undefined && Date.now() - hit.at < ttlMs) {
+      if (!force && hit !== undefined && hit.value !== undefined && Date.now() - hit.at < ttlMs) {
         return Promise.resolve(hit.value)
       }
       if (hit?.pending !== undefined) return hit.pending
@@ -217,7 +254,11 @@ window.__ModuleLoader__.load({
           return value
         },
         (error) => {
+          // A failed reload must not leave its rejected promise in the entry: a
+          // later read would hand that rejection back instead of trying again,
+          // which is exactly what the refresh button exists to do.
           if (hit?.value === undefined) store.delete(key)
+          else store.set(key, { at: hit.at, value: hit.value })
           throw error
         },
       )
@@ -228,10 +269,17 @@ window.__ModuleLoader__.load({
     /**
      * Load the per-day spend series of one provider.
      * @param provider - provider route id.
+     * @param force - reload even while the cached series is still fresh.
      * @returns the Host payload.
      */
-    function loadDaily(provider) {
-      return cachedValue(shared.daily, provider, DAILY_TTL_MS, () => getJson(`/plusvibe/daily?provider=${encodeURIComponent(provider)}`))
+    function loadDaily(provider, force = false) {
+      return cachedValue(
+        shared.daily,
+        provider,
+        DAILY_TTL_MS,
+        () => getJson(`/plusvibe/daily?provider=${encodeURIComponent(provider)}${force ? '&refresh=1' : ''}`),
+        force,
+      )
     }
 
     /**
@@ -259,13 +307,19 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Day-of-month label of one `YYYY-MM-DD` key.
+     * Weekday label of one `YYYY-MM-DD` key.
+     *
+     * A week is easier to read as days of the week than as numbers, and the
+     * exact date stays in the bar's tooltip.
      * @param key - day key.
-     * @returns the label.
+     * @param t - dictionary lookup.
+     * @returns the short weekday name, or the key itself when unparsable.
      */
-    function dayLabel(key) {
-      const day = Number.parseInt(String(key).slice(8, 10), 10)
-      return Number.isFinite(day) ? String(day) : String(key)
+    function dayLabel(key, t) {
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key))
+      if (match === null) return String(key)
+      const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+      return t(`weekday.${date.getDay()}`)
     }
 
     /**
@@ -312,6 +366,19 @@ window.__ModuleLoader__.load({
         return () => { cancelled = true }
       }, [])
 
+      // One shape for both readers of the balance route: the interval below and
+      // the header's refresh button. The caller supplies the fallback text, so
+      // this stays stable and cannot restart the interval by changing identity.
+      const applyBalance = useCallback((payload, fallback) => {
+        if (payload?.ok === true) {
+          setBalance(payload)
+          setFailure(null)
+        } else {
+          setBalance(null)
+          setFailure(payload?.error ?? fallback)
+        }
+      }, [])
+
       useEffect(() => {
         if (!enabled) {
           setBalance(null)
@@ -323,13 +390,7 @@ window.__ModuleLoader__.load({
           try {
             const payload = await getJson(`/plusvibe/balance?provider=${encodeURIComponent(provider)}`)
             if (cancelled) return
-            if (payload?.ok === true) {
-              setBalance(payload)
-              setFailure(null)
-            } else {
-              setBalance(null)
-              setFailure(payload?.error ?? t('error.balance'))
-            }
+            applyBalance(payload, t('error.balance'))
           } catch (error) {
             if (cancelled) return
             setBalance(null)
@@ -344,7 +405,7 @@ window.__ModuleLoader__.load({
         }
         // `t` is a stable bound translate; the route and its provider drive reloads.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [enabled, provider])
+      }, [enabled, provider, applyBalance])
 
       useEffect(() => {
         if (!enabled || model === null) {
@@ -362,11 +423,20 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (!open || !enabled) return undefined
         let cancelled = false
-        loadDaily(provider).then(
-          (payload) => { if (!cancelled) setDaily(payload?.ok === true ? payload : null) },
-          () => { if (!cancelled) setDaily(null) },
-        )
-        return () => { cancelled = true }
+        const read = () => {
+          loadDaily(provider).then(
+            (payload) => { if (!cancelled) setDaily(payload?.ok === true ? payload : null) },
+            () => { if (!cancelled) setDaily(null) },
+          )
+        }
+        read()
+        // The chart also carries today's spend, so it ages at the same rate as
+        // the rows above it instead of sitting minutes behind them.
+        const timer = setInterval(read, REFRESH_MS)
+        return () => {
+          cancelled = true
+          clearInterval(timer)
+        }
       }, [open, enabled, provider])
 
       // Keep the panel glued to its trigger: a resize or any scroll moves the
@@ -414,6 +484,30 @@ window.__ModuleLoader__.load({
 
       const close = useCallback(() => { setOpen(false) }, [])
 
+      // The header's refresh button: re-read the balance, and the chart while it
+      // is on screen, past both caches — the Host's own and this page's.
+      const [refreshing, setRefreshing] = useState(false)
+      const refresh = useCallback(() => {
+        if (provider === null) return Promise.resolve()
+        setRefreshing(true)
+        const settle = () => { setRefreshing(false) }
+        return Promise.all([
+          getJson(`/plusvibe/balance?provider=${encodeURIComponent(provider)}&refresh=1`).then(
+            (payload) => { applyBalance(payload, t('error.balance')) },
+            (error) => {
+              setBalance(null)
+              setFailure(error instanceof Error ? error.message : String(error))
+            },
+          ),
+          open
+            ? loadDaily(provider, true).then(
+              (payload) => { setDaily(payload?.ok === true ? payload : null) },
+              () => { setDaily(null) },
+            )
+            : Promise.resolve(),
+        ]).then(settle, settle)
+      }, [provider, open, applyBalance])
+
       const sessionRub = useMemo(() => {
         if (rates === null || usage === undefined || usage === null) return null
         const inputRate = rates.inputRub ?? 0
@@ -442,9 +536,15 @@ window.__ModuleLoader__.load({
       const maxSpend = days.reduce((max, day) => Math.max(max, typeof day?.rub === 'number' ? day.rub : 0), 0)
       const windowSpend = days.reduce((sum, day) => sum + (typeof day?.rub === 'number' ? day.rub : 0), 0)
       const todayKey = days.length > 0 ? days[days.length - 1].date : undefined
+      // "Today" comes from the same series as the last bar, so the two always
+      // agree. The provider's own counter for today counts a UTC day, which in
+      // Moscow starts three hours late; the series is the local day.
+      const lastDay = days.length > 0 ? days[days.length - 1] : null
+      const spendToday = typeof lastDay?.rub === 'number' ? lastDay.rub : balance?.spendTodayRub
+      const requestsToday = typeof lastDay?.requests === 'number' ? lastDay.requests : balance?.requestsToday
 
-      const row = (label, value, detail) => h('div', { className: 'dsh-pv-row', key: label },
-        h('dt', null, label),
+      const row = (label, value, detail, hint) => h('div', { className: 'dsh-pv-row', key: label },
+        h('dt', { title: hint }, label),
         h('dd', null, value, detail === undefined ? null : h('small', null, detail)))
 
       const panel = h('div', {
@@ -460,14 +560,32 @@ window.__ModuleLoader__.load({
       },
       h('div', { className: 'dsh-pv-head' },
         h('span', { className: 'dsh-pv-head-label' }, t('panel.title')),
-        h('span', { className: 'dsh-pv-head-value' }, reading)),
+        h('span', { className: 'dsh-pv-head-value' }, reading),
+        h('button', {
+          type: 'button',
+          className: 'dsh-pv-refresh',
+          title: t('panel.refresh'),
+          'aria-label': t('panel.refresh'),
+          'aria-busy': refreshing ? 'true' : 'false',
+          'data-busy': refreshing ? 'true' : 'false',
+          disabled: refreshing,
+          onClick: () => { void refresh() },
+        },
+        h('svg', {
+          viewBox: '0 0 24 24', width: 13, height: 13, 'aria-hidden': true,
+          fill: 'none', stroke: 'currentColor', strokeWidth: 2.2,
+          strokeLinecap: 'round', strokeLinejoin: 'round',
+        },
+        h('path', { d: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8' }),
+        h('path', { d: 'M21 3v5h-5' })))),
       h('div', { className: 'dsh-pv-rule', 'aria-hidden': true }),
       failure === null ? h('dl', { className: 'dsh-pv-rows' },
         row(t('panel.balance'), reading),
-        balance?.spendTodayRub === undefined ? null : row(
+        spendToday === undefined ? null : row(
           t('panel.today'),
-          money(t, balance.spendTodayRub),
-          balance.requestsToday === undefined ? undefined : t('panel.requests', { count: String(Math.round(balance.requestsToday)) }),
+          money(t, spendToday),
+          requestsToday === undefined ? undefined : t('panel.requests', { count: String(Math.round(requestsToday)) }),
+          t('panel.todayHint'),
         ),
         balance?.spendMonthRub === undefined ? null : row(t('panel.month'), money(t, balance.spendMonthRub)),
         row(t('panel.chat'), sessionRub === null ? '—' : `≈ ${money(t, sessionRub)}`),
@@ -497,7 +615,7 @@ window.__ModuleLoader__.load({
           h('div', {
             className: 'dsh-pv-day',
             'data-today': day?.date === todayKey ? 'true' : 'false',
-          }, dayLabel(day?.date)))
+          }, dayLabel(day?.date, t)))
         })),
       daily?.partial === true ? h('div', { className: 'dsh-pv-note' }, t('panel.partial')) : null,
       typeof site.siteUrl === 'string'

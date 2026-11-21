@@ -16,7 +16,8 @@
  * `credentials` service, and cache upstream answers briefly so a hover, a
  * remount, or several open sessions cannot hammer the provider. Requests whose
  * `Sec-Fetch-Site` names another origin are refused: the page is same-origin, so
- * nothing legitimate needs the cross-origin path.
+ * nothing legitimate needs the cross-origin path. `refresh=1` on the balance or
+ * daily route skips that cache — it is what the page's refresh button sends.
  */
 
 /** Route table; each path is registered once per plugin instance. */
@@ -31,14 +32,31 @@ const ROUTES = {
 const PLUSVIBE_HOSTS = ['plusvibeapi.ru', 'gw.plusvibeapi.ru']
 
 /** Build marker echoed by `/plusvibe/providers` so a stale Host generation is visible. */
-const BUILD = '2026-11-18.1'
+const BUILD = '2026-11-21.3'
 
-const DAY_MS = 86_400_000
 const FETCH_TIMEOUT_MS = 20_000
+
+/** History records per page; the provider's documented maximum. */
+const PAGE_SIZE = 100
+
+/** Pages fetched at once while walking a window the first time. */
+const PAGE_CONCURRENCY = 4
+
+/**
+ * How far back a refresh re-reads the history it already counted.
+ *
+ * A record appears only once its request finishes, and a long stream can finish
+ * well after it started, so its `created_at` can be older than the newest record
+ * of the previous pass. Re-reading this much of the tail catches those.
+ */
+const DAILY_OVERLAP_MS = 60 * 60_000
+
+/** Cap on the record ids remembered for that overlap; past it the series is rebuilt. */
+const DAILY_OVERLAP_IDS = 5_000
 
 const DEFAULTS = {
   days: 7,
-  maxPages: 40,
+  maxPages: 100,
   dashboardPath: '/dashboard',
 }
 
@@ -48,7 +66,7 @@ const TTL = {
   balance: 20_000,
   usage: 30_000,
   pricing: 30 * 60_000,
-  daily: 5 * 60_000,
+  daily: 60_000,
 }
 
 /**
@@ -77,12 +95,27 @@ function finiteNumber(value) {
 
 /**
  * Describe a thrown value for a response body.
+ *
+ * A failed `fetch` says only "fetch failed" and hides the reason in `cause` —
+ * the DNS name that did not resolve, the connection that was refused, the
+ * timeout that fired. That reason is the whole message: without it the card
+ * reports the same sentence for every possible fault, which is what made a
+ * broken route indistinguishable from a wrong key.
  * @param error - anything thrown.
  * @returns a short human-readable message.
  */
 function messageOf(error) {
-  if (error instanceof Error) return error.message
-  return String(error)
+  if (!(error instanceof Error)) return String(error)
+  const cause = error.cause
+  const detail = typeof cause === 'object' && cause !== null
+    ? (typeof cause.code === 'string' ? cause.code : typeof cause.message === 'string' ? cause.message : undefined)
+    : typeof cause === 'string'
+      ? cause
+      : undefined
+  if (typeof detail !== 'string' || detail.length === 0 || error.message.includes(detail)) {
+    return error.message
+  }
+  return `${error.message}: ${detail}`
 }
 
 /**
@@ -268,12 +301,13 @@ async function callApi(ctx, site, url) {
  * @param key - cache key.
  * @param ttlMs - how long a settled value stays fresh.
  * @param load - the upstream load.
+ * @param force - ignore a settled value and reload (the page's refresh button).
  * @returns the value, cached or freshly loaded.
  */
-async function cached(cache, key, ttlMs, load) {
+async function cached(cache, key, ttlMs, load, force = false) {
   const hit = cache.get(key)
   const now = Date.now()
-  if (hit !== undefined && hit.value !== undefined && now - hit.at < ttlMs) return hit.value
+  if (!force && hit !== undefined && hit.value !== undefined && now - hit.at < ttlMs) return hit.value
   if (hit?.pending !== undefined) return await hit.pending
   const pending = load().then(
     (value) => {
@@ -281,7 +315,10 @@ async function cached(cache, key, ttlMs, load) {
       return value
     },
     (error) => {
+      // Keep a stale value usable, but never keep the rejected promise: a later
+      // read would return that rejection instead of trying upstream again.
       if (hit?.value === undefined) cache.delete(key)
+      else cache.set(key, { at: hit.at, value: hit.value })
       throw error
     },
   )
@@ -365,13 +402,21 @@ function queryOf(req) {
 }
 
 /**
- * Start of the local calendar day containing one instant.
+ * Start of the local calendar day `offset` days before the one holding `time`.
+ *
+ * Every boundary this plugin draws is a calendar day on the machine it runs on —
+ * the user's own day, the same one the account page and the person reading the
+ * chart mean. Day arithmetic goes through the calendar rather than through
+ * 86 400 000 ms, because a daylight-saving change inside the window would
+ * otherwise move the boundary by an hour and land on the wrong day.
  * @param time - epoch milliseconds.
- * @returns epoch milliseconds of local midnight.
+ * @param offset - whole days to go back; 0 is the day containing `time`.
+ * @returns epoch milliseconds of local midnight that many days earlier.
  */
-function startOfLocalDay(time) {
+function startOfLocalDay(time, offset = 0) {
   const date = new Date(time)
   date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() - offset)
   return date.getTime()
 }
 
@@ -409,9 +454,10 @@ function providersPayload(ctx, settings) {
  * @param settings - resolved plugin settings.
  * @param cache - per-plugin cache map.
  * @param provider - provider route id.
+ * @param force - reload even while the cached answer is still fresh.
  * @returns the response payload.
  */
-async function balancePayload(ctx, settings, cache, provider) {
+async function balancePayload(ctx, settings, cache, provider, force = false) {
   const site = resolveSites(ctx, settings).get(provider)
   if (site === undefined) return { ok: false, provider, error: `provider "${provider}" does not use PlusVibeAPI` }
   const siteUrl = siteUrlOf(site, settings)
@@ -424,10 +470,10 @@ async function balancePayload(ctx, settings, cache, provider) {
     }
   })()
   const [balance, usage] = await Promise.allSettled([
-    cached(cache, `balance:${provider}`, TTL.balance, () => callApi(ctx, site, `${base}/balance`)),
+    cached(cache, `balance:${provider}`, TTL.balance, () => callApi(ctx, site, `${base}/balance`), force),
     origin === undefined
       ? Promise.reject(new Error('the provider base URL is not an absolute URL'))
-      : cached(cache, `usage:${provider}`, TTL.usage, () => callApi(ctx, site, `${origin}/api/key/usage`)),
+      : cached(cache, `usage:${provider}`, TTL.usage, () => callApi(ctx, site, `${origin}/api/key/usage`), force),
   ])
   const errors = []
   let balanceRub
@@ -451,7 +497,10 @@ async function balancePayload(ctx, settings, cache, provider) {
     errors.push(messageOf(usage.reason))
   }
   if (balanceRub === undefined && spendTodayRub === undefined) {
-    return { ok: false, provider, siteUrl, error: errors.join('; ') || 'no answer from PlusVibeAPI', errors }
+    // Both calls usually fail the same way (the network is down), and echoing
+    // that sentence twice helps nobody: the message names each cause once.
+    const distinct = [...new Set(errors)]
+    return { ok: false, provider, siteUrl, error: distinct.join('; ') || 'no answer from PlusVibeAPI', errors }
   }
   return {
     ok: true,
@@ -468,51 +517,129 @@ async function balancePayload(ctx, settings, cache, provider) {
 }
 
 /**
- * Per-day spend for the chart, newest records first.
+ * Per-day spend for the chart.
  *
- * The provider pages its history newest-first and exposes no aggregate, so the
- * scan stops as soon as the window is exhausted; `partial` reports a page cap
- * that was reached first, and `total` carries the provider's own record count
- * for the window.
+ * The provider pages its history newest-first and exposes no per-day aggregate,
+ * so the window is walked record by record: one page is one request, pages are
+ * fetched a few at a time, and the walk stops the moment it crosses the window
+ * start. Its `total` field is not a record count for the query — it changes with
+ * the page it is read from — so it never decides where the walk ends.
+ *
+ * A full walk is needed only once. The series is remembered together with the
+ * newest record it counted, and the next refresh reads just what appeared above
+ * that mark, a page or two. A pass that ran out of page budget leaves the rest of
+ * the window to the next pass, which continues from the oldest record it reached.
+ * `partial` reports a window that is not covered yet.
  * @param ctx - plugin context.
  * @param settings - resolved plugin settings.
  * @param cache - per-plugin cache map.
  * @param provider - provider route id.
+ * @param force - reload even while the cached series is still fresh.
  * @returns the response payload.
  */
-async function dailyPayload(ctx, settings, cache, provider) {
+async function dailyPayload(ctx, settings, cache, provider, force = false) {
   const site = resolveSites(ctx, settings).get(provider)
   if (site === undefined) return { ok: false, provider, error: `provider "${provider}" does not use PlusVibeAPI` }
   const base = apiBase(site.baseURL)
   const days = settings.days
-  const since = startOfLocalDay(Date.now() - (days - 1) * DAY_MS)
+  const since = startOfLocalDay(Date.now(), days - 1)
+  const sinceKey = localDayKey(since)
+  const stateKey = `daily-state:${provider}:${days}`
   const load = async () => {
-    const buckets = new Map()
+    const previous = cache.get(stateKey)?.value
+    // A complete series is extended upwards; an incomplete one is continued
+    // downwards from the oldest record the previous pass reached.
+    const append = previous !== undefined && previous.complete === true
+    const resume = previous !== undefined && previous.complete === false
+    // Records above the previous pass's newest one are new. A long stream lands
+    // with an older timestamp, so a short overlap is re-read and deduplicated.
+    const boundary = append ? Math.max(since, previous.frontier - DAILY_OVERLAP_MS) : since
+    const dateTo = resume ? new Date(previous.oldest).toISOString() : undefined
+    // A resumed pass may only count what the previous one did not reach, even if
+    // the provider answers with the whole window instead of the requested tail.
+    const ceiling = resume ? previous.oldest : Infinity
+    const buckets = append || resume ? previous.buckets : new Map()
+    // The ids the previous pass already counted in the range this one re-reads.
+    const counted = append ? previous.recentIds : resume ? previous.edgeIds : undefined
+    const recentIds = append ? new Set() : resume ? previous.recentIds : new Set()
+    let frontier = append || resume ? previous.frontier : 0
     let scanned = 0
-    let total = 0
-    let partial = false
-    for (let page = 1; page <= settings.maxPages; page += 1) {
-      const url = new URL(`${base}/generations`)
-      url.searchParams.set('page', String(page))
-      url.searchParams.set('limit', '100')
-      url.searchParams.set('dateFrom', new Date(since).toISOString())
-      const payload = await callApi(ctx, site, url.href)
-      const records = Array.isArray(payload?.data) ? payload.data : []
-      const reported = finiteNumber(payload?.total)
-      if (reported !== undefined) total = reported
-      for (const record of records) {
-        const dayKey = localDayKey(record?.created_at)
-        if (dayKey === undefined) continue
-        const bucket = buckets.get(dayKey) ?? { rub: 0, requests: 0 }
-        bucket.rub += finiteNumber(record?.cost_rub) ?? 0
-        bucket.requests += 1
-        buckets.set(dayKey, bucket)
+    let oldest
+    let stopped = false
+    let overflow = false
+    let edgeIds = new Set()
+    let page = 1
+    while (!stopped && page <= settings.maxPages) {
+      const batch = []
+      // Appending usually ends on the first page, so it is not worth a batch.
+      const width = append ? 1 : PAGE_CONCURRENCY
+      while (batch.length < width && page + batch.length <= settings.maxPages) {
+        batch.push(page + batch.length)
       }
-      scanned += records.length
-      if (records.length < 100) break
-      if (reported !== undefined && page * 100 >= reported) break
-      if (page === settings.maxPages) partial = true
+      const answers = await Promise.all(batch.map((number) => {
+        const url = new URL(`${base}/generations`)
+        url.searchParams.set('page', String(number))
+        url.searchParams.set('limit', String(PAGE_SIZE))
+        url.searchParams.set('dateFrom', new Date(since).toISOString())
+        if (dateTo !== undefined) url.searchParams.set('dateTo', dateTo)
+        return callApi(ctx, site, url.href)
+      }))
+      for (let index = 0; index < answers.length && !stopped; index += 1) {
+        const records = Array.isArray(answers[index]?.data) ? answers[index].data : []
+        const pageIds = new Set()
+        for (const record of records) {
+          const time = Date.parse(String(record?.created_at ?? ''))
+          if (!Number.isFinite(time)) continue
+          if (time > frontier) frontier = time
+          if (time < boundary) {
+            stopped = true
+            continue
+          }
+          if (time < since || time > ceiling) continue
+          const id = typeof record?.id === 'string' ? record.id : undefined
+          if (id === undefined) continue
+          pageIds.add(id)
+          if (oldest === undefined || time < oldest) oldest = time
+          if (time >= frontier - DAILY_OVERLAP_MS) {
+            if (recentIds.size < DAILY_OVERLAP_IDS) recentIds.add(id)
+            else overflow = true
+          }
+          // A record the previous pass already counted: its spend is in the
+          // buckets, and counting it again would inflate the chart.
+          if (counted?.has(id) === true) continue
+          const dayKey = localDayKey(time)
+          if (dayKey === undefined) continue
+          const bucket = buckets.get(dayKey) ?? { rub: 0, requests: 0 }
+          bucket.rub += finiteNumber(record?.cost_rub) ?? 0
+          bucket.requests += 1
+          buckets.set(dayKey, bucket)
+        }
+        scanned += records.length
+        edgeIds = pageIds
+        if (records.length < PAGE_SIZE) stopped = true
+      }
+      page += batch.length
     }
+    // The walk covered the window when it crossed the window start or ran out of
+    // records. An overflow means the dedupe set is unreliable, so the next pass
+    // starts over rather than trusting this one.
+    const complete = stopped && !overflow
+    // Days that fell out of the window are dropped: the state lives as long as
+    // the Host does, so a 30-day window would otherwise grow without a bound.
+    for (const dayKey of [...buckets.keys()]) {
+      if (dayKey < sinceKey) buckets.delete(dayKey)
+    }
+    cache.set(stateKey, {
+      at: Date.now(),
+      value: {
+        buckets,
+        complete,
+        frontier,
+        oldest: oldest ?? previous?.oldest ?? since,
+        recentIds,
+        edgeIds: stopped ? new Set() : edgeIds,
+      },
+    })
     const series = []
     const cursor = new Date(since)
     for (let index = 0; index < days; index += 1) {
@@ -521,9 +648,9 @@ async function dailyPayload(ctx, settings, cache, provider) {
       series.push({ date: dayKey, rub: Math.round(bucket.rub * 10_000) / 10_000, requests: bucket.requests })
       cursor.setDate(cursor.getDate() + 1)
     }
-    return { days: series, partial, scanned, total }
+    return { days: series, partial: !complete, scanned }
   }
-  const result = await cached(cache, `daily:${provider}:${days}`, TTL.daily, load)
+  const result = await cached(cache, `daily:${provider}:${days}`, TTL.daily, load, force)
   return { ok: true, provider, ...result, fetchedAt: Date.now() }
 }
 
@@ -585,8 +712,14 @@ export function apply(ctx, config) {
   ctx.inject(['webServer'], (webCtx) => {
     const routes = [
       [ROUTES.providers, () => providersPayload(ctx, settings)],
-      [ROUTES.balance, (req) => balancePayload(ctx, settings, cache, queryOf(req).get('provider') ?? '')],
-      [ROUTES.daily, (req) => dailyPayload(ctx, settings, cache, queryOf(req).get('provider') ?? '')],
+      [ROUTES.balance, (req) => {
+        const query = queryOf(req)
+        return balancePayload(ctx, settings, cache, query.get('provider') ?? '', query.get('refresh') === '1')
+      }],
+      [ROUTES.daily, (req) => {
+        const query = queryOf(req)
+        return dailyPayload(ctx, settings, cache, query.get('provider') ?? '', query.get('refresh') === '1')
+      }],
       [ROUTES.rates, (req) => {
         const query = queryOf(req)
         return ratesPayload(ctx, settings, cache, query.get('provider') ?? '', query.get('model') ?? '')

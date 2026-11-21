@@ -6,12 +6,23 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 ## [Unreleased]
 
-Storefront assets and marketplace submission. No behaviour changes: the runtime
-files are untouched. Not released yet — `version` in `package.json` stays at the
-last published release until a release is asked for.
+Nothing yet.
+
+## [0.2.0] — 2026-11-21
+
+A refresh button, a chart that reads as a week, a history walk that is complete
+instead of capped, and storefront assets for plugin directories.
 
 ### Added
 
+- A **refresh button in the card's top-right corner**. It re-reads the balance and
+  the per-day history immediately instead of waiting out the one-minute interval,
+  spins while the request is in flight, and is the way back from a failed read
+  without reloading the page. The balance and daily routes accept `refresh=1`,
+  which skips the Host's short cache so the button cannot hand back the same
+  answer it is meant to replace.
+- The chart's bars are labelled with the **weekday** instead of the day of the
+  month, so a week reads as a week; the exact date stays in the bar's tooltip.
 - `assets/icon.png` — the square PlusVibeAPI mark as published on
   plusvibeapi.ru, for the card tile in plugin directories. Byte-identical to the
   original; the in-app icon stays the vector `icon.svg`.
@@ -30,6 +41,30 @@ last published release until a release is asked for.
 
 ### Changed
 
+- **The chart now covers its window instead of stopping at a page cap.** The walk
+  through `GET /v1/generations` is remembered between reads: a complete series is
+  extended with only the records that appeared above it, and a pass that ran out
+  of page budget continues from the oldest record it reached on the next read.
+  Pages are fetched four at a time, the record ids of the overlap window are kept
+  so a long stream that finishes late is counted once, and `dailyMaxPages` now
+  defaults to 100. "History read only partly" therefore means "not covered yet",
+  and a refresh usually costs one request.
+- **"Today" comes from the same series as the last bar**, so the row and the chart
+  cannot disagree. The provider's own counter uses a UTC day, which starts later
+  than the local one; a tooltip on the row says so.
+- **A day is a calendar day on the machine running DSH.** Day arithmetic goes
+  through the calendar rather than through 86 400 000 ms, so a daylight-saving
+  change inside the window no longer shifts a boundary by an hour.
+- The chart refreshes on the same one-minute tick as the balance while the card is
+  open, and the page's own history cache dropped from 5 minutes to 30 s to match.
+- **A failed upstream call now says what failed.** `fetch` reports every
+  transport fault as the bare sentence "fetch failed" and keeps the reason in
+  `cause`; the Host printed only the sentence, and two failing calls printed it
+  twice ("fetch failed; fetch failed"). It now appends the cause — `ENOTFOUND`,
+  `ECONNREFUSED`, the timeout — and repeats a cause only once, so a broken route
+  can be told apart from a rejected key.
+- A rejected reload no longer leaves its rejected promise in either cache, which
+  would have handed the same error back to the next read instead of retrying.
 - The trademark section of both READMEs now lists the three files that carry the
   mark — `icon.svg`, `assets/icon.png`, and the bolt redrawn in
   `docs/preview.svg` — instead of claiming `icon.svg` was the only one.

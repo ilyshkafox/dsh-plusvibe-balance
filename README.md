@@ -55,11 +55,16 @@ and the token total with the cache hit rate. This plugin adds a third, at the ri
   (`plusvibeapi.ru` or `gw.plusvibeapi.ru`). Pick a model from another provider and it
   disappears — no half-truths about someone else's account.
 - **Click it** for a card: remaining balance, today's spend and request count, this
-  month's spend, an estimate for this chat, a bar chart of spend by day, and a link to
-  the account page.
+  month's spend, an estimate for this chat, a bar chart of spend by weekday, and a link
+  to the account page.
 - **Colour reacts to the balance**: normal, warning below 100 ₽, error below 10 ₽, so an
   almost-empty account is visible without opening anything.
 - **Refreshes on its own** every minute while the balance is visible.
+- **The refresh button** in the card's top-right corner re-reads the balance and the
+  chart at once, without waiting out the minute and without accepting a cached answer;
+  its icon spins while the request is in flight. It is also the way out of a
+  "fetch failed" card: once the network is back, one click re-reads it instead of
+  leaving the error there until the page reloads.
 
 ## Why the key never leaves the machine
 
@@ -86,8 +91,10 @@ All with **your** key, all read-only, all through the Host:
 | `GET /v1/pricing` | per-million token rates of the current model |
 | `GET /v1/generations` | the per-day history behind the chart |
 
-Caching: balance 20 s, usage 30 s, price list 30 min, history 5 min. Several open
-sessions share one request instead of stampeding the provider.
+Caching: balance 20 s, usage 30 s, price list 30 min, history 1 min. Several open
+sessions share one request instead of stampeding the provider. The card's refresh
+button sends `refresh=1` to the balance and history routes, which skips that cache —
+otherwise the button would hand back the same answer for another 20 seconds.
 
 ## How "this chat" is counted
 
@@ -119,8 +126,18 @@ provider actually charged (`cost_rub`).
 - One provider at a time: the reading follows the model the session currently routes to.
 - Balance for a model routed through a different provider is never shown.
 - No spending limit, no alert: it reports, it does not police.
-- The per-day chart reads at most `dailyMaxPages` × 100 history records. A very busy
-  account stops at that cap, and the card says the history was read only partly.
+- The per-day chart is built from the request history: the provider has no per-day
+  totals. So the window is read from the newest record back to its start, at most
+  `dailyMaxPages` × 100 records per pass; what it read is remembered, and a refresh
+  asks only for the new records, one page usually. A pass that runs out of budget
+  continues on the next refresh. Until the window is covered, the card says the
+  history was read only partly.
+- A day in the chart is a calendar day on the machine running DSH, not a UTC day. The
+  boundary goes through the calendar, so a daylight-saving change inside the window
+  cannot shift a day.
+- "Today" comes from the same chart, so the two never disagree. The provider's own
+  `spendTodayRub` counts a UTC day, which starts later than the local one, so its
+  "today" is smaller.
 
 ## Trademarks and use of the mark
 
