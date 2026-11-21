@@ -14,10 +14,13 @@
  *
  * Routes are registered on `webServer`, read the route's credential through the
  * `credentials` service, and cache upstream answers briefly so a hover, a
- * remount, or several open sessions cannot hammer the provider. Requests whose
- * `Sec-Fetch-Site` names another origin are refused: the page is same-origin, so
- * nothing legitimate needs the cross-origin path. `refresh=1` on the balance or
- * daily route skips that cache — it is what the page's refresh button sends.
+ * remount, or several open sessions cannot hammer the provider. Every request
+ * passes the composition's own access check first (`ctx.connection.requestRejection`,
+ * the same Host/Origin fence and browser-session authentication DSH applies to its
+ * API routes); the plugin's `Sec-Fetch-Site` fence stays behind it as a second
+ * layer, and a composition without the `connection` service keeps working with
+ * that local fence alone. `refresh=1` on the balance or daily route skips the
+ * cache — it is what the page's refresh button sends.
  */
 
 /** Route table; each path is registered once per plugin instance. */
@@ -32,7 +35,7 @@ const ROUTES = {
 const PLUSVIBE_HOSTS = ['plusvibeapi.ru', 'gw.plusvibeapi.ru']
 
 /** Build marker echoed by `/plusvibe/providers` so a stale Host generation is visible. */
-const BUILD = '2026-11-21.3'
+const BUILD = '2026-11-21.4'
 
 const FETCH_TIMEOUT_MS = 20_000
 
@@ -352,6 +355,43 @@ function sameOriginRequest(req) {
 }
 
 /**
+ * The composition's `connection` service, when it mounts one.
+ *
+ * `connection` is optional: a composition can serve Web routes without the
+ * browser carrier that provides it. Reading it through `ctx.get` keeps the
+ * routes working there instead of failing at load, and a service whose providing
+ * fiber is not active reads as absent.
+ * @param ctx - plugin context.
+ * @returns the service, or undefined when this composition has none.
+ */
+function connectionOf(ctx) {
+  if (typeof ctx?.get !== 'function') return undefined
+  const service = ctx.get('connection')
+  return service !== undefined && typeof service.requestRejection === 'function' ? service : undefined
+}
+
+/**
+ * The status the composition's connection check refuses this request with.
+ *
+ * `requestRejection` is DSH's own fence for another Web route: its Host/Origin
+ * checks defeat DNS rebinding and cross-site calls, and its browser
+ * authentication requires the page's signed session cookie. A check that throws
+ * is treated as a refusal — an exception is not permission.
+ * @param ctx - plugin context.
+ * @param req - the HTTP request.
+ * @returns 401 or 403 when the request is refused, undefined when it may proceed.
+ */
+function connectionRejection(ctx, req) {
+  const connection = connectionOf(ctx)
+  if (connection === undefined) return undefined
+  try {
+    return connection.requestRejection(req)
+  } catch {
+    return 403
+  }
+}
+
+/**
  * Write one JSON response.
  * @param res - the HTTP response.
  * @param status - status code.
@@ -368,12 +408,28 @@ function respond(res, status, payload) {
 }
 
 /**
- * Wrap a handler with the origin fence and a failure body.
+ * Wrap a handler with the DSH access check, the local origin fence, and a failure body.
+ *
+ * The standard check decides: when the composition provides `connection`, its
+ * `requestRejection` runs first and its 401/403 is the answer. The local fence
+ * stays behind it as a second layer and is the only gate where the service is
+ * absent.
+ * @param ctx - plugin context; the connection service is read per request.
  * @param handler - async handler.
  * @returns a `(req, res)` route handler.
  */
-function guarded(handler) {
+function guarded(ctx, handler) {
   return (req, res) => {
+    const rejection = connectionRejection(ctx, req)
+    if (rejection !== undefined) {
+      respond(res, rejection, {
+        ok: false,
+        error: rejection === 401
+          ? 'request is not authenticated'
+          : 'request rejected by the DSH connection check',
+      })
+      return
+    }
     if (!sameOriginRequest(req)) {
       respond(res, 403, { ok: false, error: 'cross-origin request rejected' })
       return
@@ -729,7 +785,7 @@ export function apply(ctx, config) {
       webCtx.effect(() => webCtx.webServer.register({
         kind: 'exact',
         path,
-        handler: guarded(async (req, res) => {
+        handler: guarded(webCtx, async (req, res) => {
           respond(res, 200, await run(req))
         }),
       }), `plusvibe-balance: ${path}`)

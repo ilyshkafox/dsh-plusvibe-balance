@@ -6,7 +6,18 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 ## [Unreleased]
 
-Nothing yet.
+### Security
+
+- **The four HTTP routes now go through DSH's own access check.** Each request asks
+  the composition's `ctx.connection.requestRejection` — the Host/Origin fence and
+  browser-session authentication DSH applies to its `/api` routes — before the route
+  reads anything, so a page that is not signed in, or a request another origin or host
+  started, is refused by the harness itself and never reaches the key. The refusal is
+  the same `{ "ok": false, "error": … }` JSON as before, with the status DSH returned
+  (`401` or `403`). The plugin's `Sec-Fetch-Site` fence stays behind that check as a
+  second layer, and remains the only gate in a composition that mounts no `connection`
+  service, so the plugin still works there. Registration and disposal are unchanged:
+  the routes and their check are removed together with `ctx.effect`.
 
 ## [0.2.0] — 2026-11-21
 
