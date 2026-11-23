@@ -167,13 +167,8 @@ PlusVibeAPI, and it is not an official client of theirs.
 paid tiers, no donations, no advertising, no affiliate or referral payments, no paid
 support. It is published free of charge as open source, for anyone to use.
 
-PlusVibeAPI and its logo belong to their owner; this project claims no rights to them.
-**If the rightsholder asks for the mark to be removed or replaced — for any reason, with
-no justification needed — it will be removed in the next release**, and the package can
-be republished without it the same day. Those three files are the only ones that carry
-the mark, and nothing else in the package refers to them, so replacing them with any
-other glyph is a three-file change that touches no behaviour: `icon.svg` and
-`assets/icon.png` are static assets, and `docs/preview.svg` is a document, not code.
+PlusVibeAPI and its logo belong to their owner; this project claims no rights to them,
+and the mark is used only to name the service the plugin talks to.
 
 ## License
 
@@ -195,7 +190,6 @@ Written and maintained by **ilyshkafox** — <ilyshkafox@mail.ru>.
 | What | Where |
 |---|---|
 | Bugs, questions, ideas | [open an issue](https://github.com/ilyshkafox/dsh-plusvibe-balance/issues) |
-| A request from the rightsholder about the mark | email, and it is honoured in the next release |
 | A security problem | email, with `security` in the subject |
 
 Email is fine for anything that does not fit an issue. It is a personal mailbox, so
