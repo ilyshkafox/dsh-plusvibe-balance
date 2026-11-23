@@ -8,6 +8,22 @@ Notable changes to `dsh-plusvibe-balance`. Format follows
 
 Nothing yet.
 
+## [0.3.1] — 2026-11-24
+
+The trademark section states whose mark it is and stops promising to remove it on
+request. No code changed.
+
+### Changed
+
+- **The trademark section of both READMEs no longer offers to remove or replace the
+  mark on the rightsholder's request.** It keeps the statements that matter — the mark
+  belongs to its owner, this project claims no rights to it, and the mark is used only
+  to name the service the plugin talks to — and drops the paragraph that promised a
+  removal in the next release, same day, as a three-file change. The contact-table row
+  that existed only to receive such a request is gone too.
+- **The storefront descriptions in `locale/en.json` and `locale/ru.json` lose the same
+  trailing clause**, so what a plugin directory shows matches the READMEs.
+
 ## [0.3.0] — 2026-11-21
 
 The four HTTP routes now pass DeepSeek Harness's own access check before they read
